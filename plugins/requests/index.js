@@ -12,14 +12,16 @@ import {
   getMemberType,
   getPaymentDataOfSubscription,
   getMemberOneTimeSubscriptions,
+  getMemberOneTimeSubscriptionsK6,
   getSubscriptionPayments,
   getMemberShipStatus,
   getPremiumMemberSubscriptionInfo,
   updateSubscriptionFromMonthToYear,
   isMemberPaidSubscriptionWithMobile,
+  updateSubscriptionNote,
 } from '~/utils/memberSubscription'
 
-import { API_TIMEOUT, ENV, API_PATH_FRONTEND } from '~/configs/config.js'
+import { ENV, API_PATH_FRONTEND } from '~/configs/config.js'
 
 const baseUrl = process.browser
   ? `//${location.host}/`
@@ -71,7 +73,8 @@ async function fetchApiData(url, fromMembershipGateway = false, token) {
     data.items?.length > 0 ||
     Object.keys(data.endpoints || {}).length > 0 ||
     data.hits?.total?.value > 0 || // properties response by /search api
-    (url.startsWith('/tags') && data.id)
+    (url.startsWith('/tags') && data.id) ||
+    (url.startsWith('/topics') && data.id)
 
   if (hasData) {
     return fromMembershipGateway
@@ -159,8 +162,9 @@ async function fetchGcsData(filename) {
     let data
 
     if (ENV === 'prod' || !process.browser) {
+      // not set timeout to prevent exceed timeout at client side,
       apiUrl = `https://statics.mirrormedia.mg/json/${filename}.json`
-      ;({ data = {} } = await axios.get(apiUrl, { timeout: API_TIMEOUT }))
+      ;({ data = {} } = await axios.get(apiUrl))
     } else {
       // 由於 CORS 的問題，不能直接在 browser 端打 api（除了生產環境），而是必須透過前端 server 去打
       apiUrl = `${baseUrl}${API_PATH_FRONTEND}/gcs/${filename}`
@@ -190,8 +194,9 @@ async function fetchGcsGroupData(filename) {
     const path = isStagingOrProd ? 'json' : 'dev'
 
     if (ENV === 'prod' || !process.browser) {
-      apiUrl = `https://storage.googleapis.com/statics.mirrormedia.mg/${path}/${filename}.json`
-      ;({ data = {} } = await axios.get(apiUrl, { timeout: API_TIMEOUT }))
+      // not set timeout to prevent exceed timeout at client side,
+      apiUrl = `https://statics.mirrormedia.mg/${path}/${filename}.json`
+      ;({ data = {} } = await axios.get(apiUrl))
     } else {
       // 由於 CORS 的問題，不能直接在 browser 端打 api（除了生產環境），而是必須透過前端 server 去打
       apiUrl = `${baseUrl}${API_PATH_FRONTEND}/grouped-gcs/${filename}`
@@ -236,9 +241,9 @@ export default (context, inject) => {
 
   inject('fetchEvent', (params) => fetchApiData(`/event${buildParams(params)}`))
 
-  inject('fetchExternals', (params) =>
-    fetchApiData(`/externals${buildParams(params)}`)
-  )
+  inject('fetchExternals', (params) => {
+    return fetchApiData(`/externals${buildParams(params)}`)
+  })
 
   inject('fetchImages', (params) =>
     fetchApiData(`/images${buildParams(params)}`)
@@ -294,12 +299,14 @@ export default (context, inject) => {
   )
 
   inject('fetchTag', (id) => fetchApiData(`/tags/${id}`))
+  inject('fetchTags', (params) => fetchApiData(`/tags${buildParams(params)}`))
 
   inject('fetchTimeline', (id) => fetchApiData(`/timeline/${id}`))
 
   inject('fetchTopics', (params) =>
     fetchApiData(`/topics${buildParams(params)}`)
   )
+  inject('fetchTopic', (id) => fetchApiData(`/topics/${id}`))
 
   inject('fetchWatches', (params) =>
     fetchApiData(`/watches${buildParams(params)}`)
@@ -331,6 +338,7 @@ export default (context, inject) => {
 
   inject('fetchPopular', () => fetchGcsData('popularlist'))
 
+  inject('fetchHeadersNew', () => fetchGcsData('headers_new'))
   inject('fetchMemberSections', () => fetchGcsData('member_sections'))
 
   inject('fetchMemberSectionsArticles', () =>
@@ -380,6 +388,9 @@ export default (context, inject) => {
   inject('getMemberOneTimeSubscriptions', async (gateWayPayload) => {
     return await getMemberOneTimeSubscriptions(context, gateWayPayload)
   })
+  inject('getMemberOneTimeSubscriptionsK6', async (gateWayPayload) => {
+    return await getMemberOneTimeSubscriptionsK6(context, gateWayPayload)
+  })
   inject('getSubscriptionPayments', async (gateWayPayload) => {
     return await getSubscriptionPayments(context, gateWayPayload)
   })
@@ -391,6 +402,9 @@ export default (context, inject) => {
   })
   inject('updateSubscriptionFromMonthToYear', async (subscriptionId) => {
     return await updateSubscriptionFromMonthToYear(context, subscriptionId)
+  })
+  inject('updateSubscriptionNote', async (subscriptionId, note) => {
+    return await updateSubscriptionNote(context, subscriptionId, note)
   })
   inject('isMemberPaidSubscriptionWithMobile', async () => {
     return await isMemberPaidSubscriptionWithMobile(context)

@@ -203,8 +203,15 @@ import Cookie from 'vue-cookie'
 import VueDfpProvider from 'plate-vue-dfp/DfpProvider.vue'
 import { currentYPosition, elmYPosition } from '../kc-scroll'
 import { adtracker } from './util/adtracking'
-import { currEnv, getTruncatedVal, getValue, unLockJS } from './util/comm'
+import {
+  currEnv,
+  getTruncatedVal,
+  getValue,
+  unLockJS,
+  getBrief,
+} from './util/comm'
 import { getRole } from './util/mmABRoleAssign'
+
 import {
   DFP_ID,
   DFP_UNITS,
@@ -248,6 +255,7 @@ const WINE_TOPICS_ID = [
   '5a4d8e60160ac91000294611',
   '5ff7d152127ff40f00d7125c',
   '61d6ade96fef6b0f00f8407e',
+  '63b7907e7d893f1a00f1ddb1',
 ]
 const PRESIDENT_ELECTION_ID = '5c766e19315ec51000909259'
 
@@ -413,7 +421,6 @@ const fetchAllArticlesByUuid = (store, uuid, type, useMetaEndpoint) => {
       }
     })
 }
-
 export default {
   name: 'Topic',
   layout: 'default',
@@ -452,9 +459,25 @@ export default {
       )
       this.concatArticleList()
     }
+
+    /**
+     * function of computing variable `metaTopicKeywords`
+     * see comment at `metaTopicKeywords` to realize why use $fetchTopic and $fetchTags is needed.
+     * @type {{tags: string[]| [] }}}
+     */
+    const data = await this.$fetchTopic(this.$route.params.topicId)
+    if (data?.tags?.length !== 0) {
+      const tagsRes = await this.$fetchTags({
+        id: data?.tags,
+      })
+
+      this.tagsName = tagsRes.items.map((i) => i.name)
+    }
   },
   data() {
     return {
+      tagsName: [],
+
       // data for new feature
       pageOfNotFeaturedArticle: 1,
       pageOfIsFeaturedArticle: 1,
@@ -535,10 +558,7 @@ export default {
       return _.slice(this.articles, 12)
     },
     shouldRenderRedesignTopicList() {
-      return (
-        this.$config.topicListFeatureToggle === 'on' &&
-        this.topicType === 'list'
-      )
+      return this.topicType === 'list'
     },
     shouldLoadMoreNotFeaturedArticles() {
       return (
@@ -753,6 +773,30 @@ export default {
       } else {
         return 'desktop'
       }
+    },
+
+    metaDescription() {
+      if (this?.topic?.ogDescription) {
+        return getTruncatedVal(this?.topic?.ogDescription, 50)
+      } else if (this.topic?.brief?.html) {
+        return getBrief(this.topic, 50)
+      }
+      return SITE_DESCRIPTION
+    },
+
+    /*
+     * Originally, we use computed variable `this.tags`and transform it to string, then assign it as content of meta `keywords`.
+     * However, some bug is happened at unknown situation:
+     * `this.tag` will not be updated to the status of cms at unknown situation.
+     * Because the structure of code at Topic page is too complex and hard to refactor, we not to trace root case, but rewrite another logic of getting tags:
+     * we use function `this.$fetchTopic` to get id of tags which certain topic page contain, and use function `this.$fetchTags` to get name of tags.
+     * After we get name of tags, we transform it to string, then assign it as content of meta `keywords`..
+     */
+    metaTopicKeywords() {
+      if (Array.isArray(this.tagsName) && this.tagsName.length !== 0) {
+        return this.tagsName.join(', ')
+      }
+      return undefined
     },
   },
   watch: {
@@ -1186,16 +1230,12 @@ export default {
   head() {
     const {
       heroImage = {},
-      ogDescription = '',
       ogImage = {},
       ogTitle = '',
       name = '',
       subtitle = '',
     } = this.topic
     const metaTitle = ogTitle || name
-    const metaDescription = ogDescription
-      ? getTruncatedVal(ogDescription, 50)
-      : SITE_DESCRIPTION
     const metaImage = ogImage
       ? _.get(ogImage, 'image.resizedTargets.desktop.url')
       : _.get(heroImage, 'image.resizedTargets.desktop.url', SITE_OGIMAGE)
@@ -1208,20 +1248,31 @@ export default {
         subtitle
           ? { hid: 'subtitle', name: 'subtitle', content: subtitle }
           : {},
-        { hid: 'description', name: 'description', content: metaDescription },
+        {
+          hid: 'description',
+          name: 'description',
+          content: this.metaDescription,
+        },
         { hid: 'og:title', property: 'og:title', content: metaTitle },
         {
           hid: 'og:description',
           property: 'og:description',
-          content: metaDescription,
+          content: this.metaDescription,
         },
         { hid: 'og:url', property: 'og:url', content: ogUrl },
         { hid: 'og:image', property: 'og:image', content: metaImage },
         { hid: 'twitter:title', name: 'twitter:title', content: metaTitle },
+        this.metaTopicKeywords
+          ? {
+              hid: 'keywords',
+              property: 'keywords',
+              content: `${this.metaTopicKeywords}`,
+            }
+          : {},
         {
           hid: 'twitter:description',
           name: 'twitter:description',
-          content: metaDescription,
+          content: this.metaDescription,
         },
         { hid: 'twitter:image', name: 'twitter:image', content: metaImage },
       ],

@@ -16,6 +16,39 @@
               <div ref="fixedTriggerEnd" />
             </template>
 
+            <template #storyRelateds>
+              <LazyRenderer
+                class="story__list"
+                @load="handleLoadStoryListRelated"
+              >
+                <UiStoryListRelatedRedesignWrapper
+                  v-if="$GOExp['normal-post-related-redesign'].variant === '1'"
+                  :relateds="relateds"
+                  :relatedImages="relatedImages"
+                  :canAdvertise="canAdvertise"
+                  :device="device"
+                  @sendGa="sendGaForClick('related')"
+                />
+                <UiStoryListRelated
+                  v-else
+                  :items="relateds"
+                  :images="relatedImages"
+                  @sendGa="sendGaForClick('related')"
+                >
+                  <template v-if="canAdvertise" #ads>
+                    <ClientOnly>
+                      <MicroAdWithLabel
+                        v-for="unit in microAdUnits[device]"
+                        :key="unit.name"
+                        :unitId="unit.id"
+                      />
+                      <div id="_popIn_recommend"></div>
+                    </ClientOnly>
+                  </template>
+                </UiStoryListRelated>
+              </LazyRenderer>
+            </template>
+
             <template v-if="isDesktopWidth" #dableWidget>
               <ClientOnly>
                 <div ref="dableWidget" class="dable-widget">
@@ -72,7 +105,7 @@
                     class="latest-list"
                     heading="最新文章"
                     :items="latestStories"
-                    :isStyleAdjusted="false"
+                    :isStyleAdjusted="true"
                     @sendGa="sendGaForClick('latest')"
                   />
                 </LazyRenderer>
@@ -94,13 +127,20 @@
                   class="story__popular-list"
                   @load="fetchPopularStories"
                 >
-                  <UiArticleListAside
+                  <UiArticleListAsideB
                     v-if="doesHavePopularStories"
                     heading="熱門文章"
                     :items="popularStories"
-                    :isStyleAdjusted="false"
+                    :isStyleAdjusted="true"
                     @sendGa="sendGaForClick('popular')"
-                  />
+                  >
+                    <template v-slot:_popIn_recommend_hot
+                      ><div id="_popIn_recommend_hot"></div>
+                    </template>
+                    <template v-slot:_popIn_recommend_hot_2>
+                      <div id="_popIn_recommend_hot_2"></div>
+                    </template>
+                  </UiArticleListAsideB>
                 </LazyRenderer>
 
                 <LazyRenderer v-if="isDesktopWidth" class="story__fb-page">
@@ -142,14 +182,18 @@ import ContainerHeader from '~/components/ContainerHeader.vue'
 import ContainerStoryBody from '~/components/ContainerStoryBody.vue'
 import FbPage from '~/components/FbPage.vue'
 import UiArticleListAside from '~/components/UiArticleListAside.vue'
+import UiArticleListAsideB from '~/components/UiArticleListAsideB.vue'
 import ContainerGptAd from '~/components/ContainerGptAd.vue'
 import UiStickyAd from '~/components/UiStickyAd.vue'
 import ContainerFullScreenAds from '~/components/ContainerFullScreenAds.vue'
 import UiFooter from '~/components/UiFooter.vue'
+import MicroAdWithLabel from '~/components/MicroAdWithLabel.vue'
+import UiStoryListRelated from '~/components/UiStoryListRelated.vue'
+import UiStoryListRelatedRedesignWrapper from '~/components/UiStoryListRelatedRedesignWrapper.vue'
 
 import { DOMAIN_NAME, ENV } from '~/configs/config'
 import { SITE_OG_IMG, SITE_TITLE } from '~/constants/index'
-import { DABLE_WIDGET_IDS } from '~/constants/ads.js'
+import { DABLE_WIDGET_IDS, MICRO_AD_UNITS } from '~/constants/ads.js'
 import { SECTION_IDS } from '~/constants/index.js'
 
 export default {
@@ -164,10 +208,13 @@ export default {
     ContainerStoryBody,
     FbPage,
     UiArticleListAside,
-
+    UiArticleListAsideB,
     ContainerGptAd,
     UiStickyAd,
     ContainerFullScreenAds,
+    MicroAdWithLabel,
+    UiStoryListRelated,
+    UiStoryListRelatedRedesignWrapper,
 
     UiFooter,
   },
@@ -198,6 +245,7 @@ export default {
       hasLoadedLatestStories: false,
 
       sectionId: SECTION_IDS.news,
+      microAdUnits: MICRO_AD_UNITS.STORY,
 
       popularStories: [],
       story: {},
@@ -208,11 +256,13 @@ export default {
       shouldFixAside: false,
 
       scrollDepthObserver: undefined,
+      relatedImages: [],
     }
   },
   computed: {
     ...mapState({
       viewportHeight: (state) => state.viewport.height,
+      canAdvertise: (state) => state.canAdvertise,
     }),
     ...mapGetters({
       isDesktopWidth: 'viewport/isViewportWidthUpXl',
@@ -238,6 +288,12 @@ export default {
       const partnerName = this.storySlug.split('_')[0]
       return this.displayedPartners.find((item) => item.name === partnerName)
     },
+    relateds() {
+      return (this.story.relateds ?? []).filter((item) => item.slug)
+    },
+    device() {
+      return this.isDesktopWidth ? 'PC' : 'MB'
+    },
   },
 
   watch: {
@@ -258,6 +314,18 @@ export default {
     this.scrollDepthObserver.disconnect()
   },
   methods: {
+    async fetchRelatedImages() {
+      const imageIds = this.relateds.map((item) => item.heroImage)
+
+      const { items = [] } = await this.$fetchImages({
+        id: imageIds,
+        maxResults: this.relateds.length,
+      })
+      this.relatedImages = items
+    },
+    handleLoadStoryListRelated() {
+      this.fetchRelatedImages()
+    },
     async fetchLatestStories(baseUrl) {
       const { items = [] } = await this.$fetchList({
         sort: '-publishedDate',
@@ -288,25 +356,28 @@ export default {
       if (ENV === 'lighthouse') {
         return
       }
-
-      const { report: items = [] } = await this.$fetchPopular()
-      this.popularStories = items
-        .slice(0, 9)
-        .map(function transformContent({
-          slug = '',
-          title = '',
-          heroImage = {},
-          sections = [],
-        }) {
-          return {
-            slug,
-            title,
-            href: slug,
-            imgSrc: getImgSrc(heroImage),
-            label: getLabel(sections),
-            sectionName: sections[0]?.name,
-          }
-        })
+      try {
+        const { report: items = [] } = await this.$fetchPopular()
+        this.popularStories = items
+          .slice(0, 9)
+          .map(function transformContent({
+            slug = '',
+            title = '',
+            heroImage = {},
+            sections = [],
+          }) {
+            return {
+              slug,
+              title,
+              href: slug,
+              imgSrc: getImgSrc(heroImage),
+              label: getLabel(sections),
+              sectionName: sections[0]?.name,
+            }
+          })
+      } catch (err) {
+        this.popularStories = []
+      }
     },
     handleLoadDableWidget() {
       this.shouldLoadDableScript = true
@@ -370,12 +441,16 @@ export default {
     },
     observeScrollDepthForGa() {
       import('intersection-observer').then(() => {
-        const { popularList } = this.$refs
+        const { dableWidget, popularList } = this.$refs
 
         const triggers = [
           {
             elem: document.getElementById('story-end'),
             eventLabel: 'end',
+          },
+          {
+            elem: dableWidget,
+            eventLabel: 'matched',
           },
           {
             elem: popularList.$el,
@@ -465,6 +540,53 @@ export default {
         { property: 'article:published_time', content: publishedDateIso },
       ],
       link: [{ rel: 'canonical', href: pageUrl }],
+
+      script: [
+        {
+          hid: 'dable',
+          skip: !this.shouldLoadDableScript,
+          innerHTML: `
+            (function (d, a, b, l, e, _) {
+              if (d[b] && d[b].q) return
+              d[b] = function () {
+                ;(d[b].q = d[b].q || []).push(arguments)
+              }
+              e = a.createElement(l)
+              e.async = 1
+              e.charset = 'utf-8'
+              e.src = '//static.dable.io/dist/plugin.min.js'
+              _ = a.getElementsByTagName(l)[0]
+              _.parentNode.insertBefore(e, _)
+            })(window, document, 'dable', 'script')
+            dable('setService', 'mirrormedia.mg')
+            dable('sendLogOnce')
+            dable('renderWidget', 'dablewidget_${DABLE_WIDGET_IDS.MB}')
+            dable('renderWidget', 'dablewidget_${DABLE_WIDGET_IDS.PC}')
+          `,
+        },
+        {
+          hid: 'popinAd',
+          innerHTML: `
+            (function () {
+              var pa = document.createElement('script')
+              pa.type = 'text/javascript'
+              pa.charset = 'utf-8'
+              pa.async = true
+
+              pa.src =
+                window.location.protocol +
+                '//api.popin.cc/searchbox/mirrormedia_tw.js'
+
+              var s = document.getElementsByTagName('script')[0]
+              s.parentNode.insertBefore(pa, s)
+            })()
+          `,
+        },
+      ],
+      __dangerouslyDisableSanitizersByTagID: {
+        dable: ['innerHTML'],
+        popinAd: ['innerHTML'],
+      },
     }
   },
 }
@@ -649,6 +771,165 @@ aside {
   @include media-breakpoint-up(xl) {
     margin-top: 1.5em;
     margin-bottom: 0;
+  }
+}
+
+.micro-ad {
+  margin-top: 16px;
+  color: #808080;
+
+  &::v-deep {
+    #compass-fit-widget {
+      font-family: inherit !important;
+      margin-bottom: 0 !important;
+    }
+
+    #compass-fit-widget-content {
+      display: flex;
+
+      &::before {
+        content: '';
+        display: block;
+        width: 10px;
+        flex-shrink: 0;
+        background-color: #808080;
+      }
+    }
+
+    .pop_item_title,
+    .popListVert-list__item--text {
+      display: flex;
+      align-items: center;
+      flex-grow: 1;
+      background-color: #eee !important;
+      padding: 16px;
+      @include media-breakpoint-up(md) {
+        padding-left: 32px;
+        padding-right: 32px;
+      }
+    }
+
+    .pop_item_title a,
+    .popListVert-list__item--text h2 {
+      font-size: 18px;
+      line-height: 1.3;
+      display: block;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      // 2.6em = 1em * 1.3 * 2
+      max-height: 2.6em;
+    }
+
+    .pop_item_title a {
+      font-family: inherit !important;
+    }
+
+    figure,
+    .popListVert-list__item--img {
+      position: relative;
+      flex-shrink: 0;
+      order: 1;
+      width: 33%;
+      padding-top: calc(33% * 0.75);
+      @include media-breakpoint-up(md) {
+        width: 25%;
+        padding-top: calc(25% * 0.75);
+      }
+      @include media-breakpoint-up(xl) {
+        width: 20%;
+        padding-top: calc(20% * 0.75);
+      }
+
+      img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    .pop_item--colorBlock,
+    .popListVert-list__item--text > div {
+      display: none;
+    }
+
+    .popListVert-list__item {
+      display: flex;
+      flex-grow: 1;
+    }
+
+    .popListVert-list__item--text a {
+      font-weight: 400 !important;
+    }
+  }
+}
+
+#_popIn_recommend {
+  position: relative;
+  &::v-deep {
+    ._popIn_recommend_container {
+      padding-bottom: 0;
+    }
+
+    ._popIn_recommend_article {
+      &::before {
+        flex-shrink: 0;
+        position: static;
+        height: auto;
+      }
+    }
+
+    ._popIn_recommend_art_title {
+      flex-grow: 1;
+      margin-left: 0;
+      white-space: normal;
+      @include media-breakpoint-up(md) {
+        padding-left: 32px;
+        padding-right: 32px;
+      }
+
+      a {
+        display: block;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+    }
+
+    ._popIn_recommend_art_img {
+      flex-shrink: 0;
+      width: 33%;
+      padding-top: calc(33% * 0.75);
+      @include media-breakpoint-up(md) {
+        width: 25%;
+        padding-top: calc(25% * 0.75);
+      }
+      @include media-breakpoint-up(xl) {
+        width: 20%;
+        padding-top: calc(20% * 0.75);
+      }
+      &::after {
+        content: '特企';
+        z-index: 2;
+        padding: 4px;
+        background: rgba(188, 188, 188, 1);
+        color: #ffffff;
+        font-weight: 300;
+        font-size: 12px;
+        line-height: 12px;
+        position: absolute;
+        transform: translate(0, -100%);
+        @include media-breakpoint-up(md) {
+          font-size: 14px;
+          line-height: 14px;
+        }
+      }
+    }
   }
 }
 </style>

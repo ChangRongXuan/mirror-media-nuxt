@@ -24,6 +24,10 @@
       <div class="credit">
         <span v-for="credit in post.credits" :key="credit">{{ credit }}</span>
       </div>
+      <div v-if="shouldShowDonate" class="donate">
+        <UiDonateButton class="donate-btn" />
+        <UiBeSubscriberButton class="subscribe-btn" />
+      </div>
     </div>
 
     <UiArticleBody
@@ -67,17 +71,17 @@
 
 <script>
 import { mapGetters } from 'vuex'
-import dayjs from 'dayjs'
-
+import UiBeSubscriberButton from '../UiBeSubscriberButton.vue'
 import UiTheCover from './UiTheCover.vue'
 import UiArticleBody from './UiArticleBody.vue'
 import UiArticleIndex from './UiArticleIndex.vue'
 import UiListRelated from './UiListRelated.vue'
 import UiArticleBodyForPremium from '~/components/culture-post-for-premium/UiArticleBody.vue'
 import UiWineWarning from '~/components/UiWineWarning.vue'
+import UiDonateButton from '~/components/UiDonateButton.vue'
 
 import { SITE_OG_IMG, SITE_TITLE, SITE_URL } from '~/constants/index'
-import { doesContainWineName } from '~/utils/article.js'
+import { doesContainWineName, getFormattedTimeStr } from '~/utils/article.js'
 
 export default {
   name: 'ContainerCulturePost',
@@ -89,6 +93,8 @@ export default {
     UiListRelated,
     UiWineWarning,
     UiArticleBodyForPremium,
+    UiDonateButton,
+    UiBeSubscriberButton,
   },
 
   props: {
@@ -137,6 +143,13 @@ export default {
     ...mapGetters({
       isViewportWidthUpXl: 'viewport/isViewportWidthUpXl',
     }),
+    shouldShowDonate() {
+      const slug = this.$route?.params?.slug ?? ''
+      if (/^\d{8}(mkt|cnt|prf|corpmkt)/.test(slug)) {
+        return false
+      }
+      return this.$config.donateFeatureToggle
+    },
     post() {
       const {
         id = '',
@@ -155,6 +168,7 @@ export default {
         updatedAt = '',
         relateds = [],
         isTruncated = false,
+        ogDescription = '',
       } = this.story
 
       const heroVideoSrc = heroVideo?.video?.url || ''
@@ -179,10 +193,11 @@ export default {
           heroImage: heroImgsResized,
           mobileImage: mobileImage?.image?.resizedTargets || {},
         },
-        publishedDate: dayjs(publishedDate).format('YYYY.M.D'),
-        updatedAt: dayjs(updatedAt).format('YYYY.M.D HH:mm'),
+        publishedDate: getFormattedTimeStr(publishedDate),
+        updatedAt: getFormattedTimeStr(updatedAt),
         relateds,
         isTruncated,
+        ogDescription,
       }
 
       function getCredits() {
@@ -323,8 +338,15 @@ export default {
   },
 
   head() {
-    const { title = '', brief = '', heroImage = {}, ogImage = {} } = this.post
-    const description = brief.map((item) => item.content).join('')
+    const {
+      title = '',
+      brief = '',
+      heroImage = {},
+      ogImage = {},
+      ogDescription = '',
+    } = this.post
+    const description =
+      ogDescription || brief.map((item) => item.content).join('')
     const image = ogImage.tablet?.url || heroImage.tablet?.url || SITE_OG_IMG
     const dableImgUrl = ogImage.tiny?.url || heroImage.tiny?.url || SITE_OG_IMG
 
@@ -426,7 +448,24 @@ export default {
     }
   }
 }
+.donate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
+  margin-top: 20px;
+  @include media-breakpoint-up(md) {
+    margin-top: 12px;
+  }
+  @include media-breakpoint-up(xl) {
+    margin-top: 24px;
+  }
+
+  .donate-btn {
+    margin-top: 0;
+    margin-right: 8px;
+  }
+}
 .list-related-container {
   margin-left: 10px;
   margin-right: 10px;

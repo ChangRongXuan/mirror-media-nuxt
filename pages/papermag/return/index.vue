@@ -17,7 +17,6 @@
 
 <script>
 import axios from 'axios'
-import dayjs from 'dayjs'
 import { print } from 'graphql/language/printer'
 import { merchandiseWithoutShippingFee } from '~/utils/papermag-merchandise.js'
 import SubscribeStepProgress from '~/components/SubscribeStepProgress.vue'
@@ -37,13 +36,11 @@ export default {
     SubscribeFail,
     SubscribeSuccess,
   },
-  async asyncData({ req, redirect, route }) {
-    if (route.query['order-fail'])
+  async asyncData({ req, redirect }) {
+    if (!req) {
       return {
         status: 'order-fail',
       }
-    if (req.method !== 'POST') {
-      redirect('/papermag')
     }
 
     const trace = req.header('X-Cloud-Trace-Context')?.split('/')
@@ -57,6 +54,17 @@ export default {
         'logging.googleapis.com/trace': `projects/mirrormedia-1470651750304/traces/${trace}`,
       })
     )
+
+    if (req.method !== 'POST') {
+      redirect('/papermag')
+      return
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.query, 'order-fail')) {
+      return {
+        status: 'order-fail',
+      }
+    }
 
     try {
       const infoData = req.body
@@ -102,10 +110,6 @@ export default {
         }
       }
 
-      const date = dayjs(new Date(decryptInfoData.createdAt)).format(
-        'YYYY-MM-DD'
-      )
-
       const { name, shippingFeePerCount } = merchandiseWithoutShippingFee({
         code: decryptInfoData.merchandise.code,
       })
@@ -137,7 +141,7 @@ export default {
         status: infoData.Status,
         orderInfo: {
           orderId: decryptInfoData.orderNumber,
-          date,
+          date: new Date(decryptInfoData.createdAt),
           discountPrice: decryptInfoData.promoteCode !== '',
           discount_code: decryptInfoData.promoteCode,
         },

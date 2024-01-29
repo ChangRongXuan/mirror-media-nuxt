@@ -1,11 +1,11 @@
 import _ from 'lodash'
 import Bowser from 'bowser'
 import Cookie from 'vue-cookie'
-import moment from 'moment'
 import sanitizeHtml from 'sanitize-html'
 import truncate from 'truncate'
 import uuidv4 from 'uuid/v4'
 import { SITE_DOMAIN, SITE_URL, SITE_PROJ_URL } from '../constants'
+import dayjs from '~/utils/dayjs'
 
 const debug = require('debug')('CLIENT:comm')
 
@@ -108,9 +108,9 @@ export function getHref(relAritlcle = {}, isAppPage = false) {
 
   switch (style) {
     case 'campaign':
-      return `/campaigns/${slug}`
+      return `/campaigns/${slug}/index.html`
     case 'projects':
-      return `/projects/${slug}`
+      return `/projects/${slug}/index.html`
     default:
       /*
        * if (_.split(href, '/')[1] === 'topic') {
@@ -127,9 +127,9 @@ export function getHrefFull(relAritlcle = {}, isAppPage = false) {
   const { style = '', slug } = relAritlcle
   switch (style) {
     case 'campaign':
-      return `${SITE_URL}/campaigns/${slug}`
+      return `${SITE_URL}/campaigns/${slug}/index.html`
     case 'projects':
-      return `${SITE_URL}/projects/${slug}`
+      return `${SITE_URL}/projects/${slug}/index.html`
     case 'readr':
       return `${SITE_PROJ_URL}/project/${slug}`
     default:
@@ -488,7 +488,7 @@ function _normalizeLog({
       'client-os-version': browser.os.osversion,
 
       'curr-url': window.location.href,
-      datetime: moment(Date.now()).format('YYYY.MM.DD HH:mm:ss'),
+      datetime: dayjs(Date.now()).format('YYYY.MM.DD HH:mm:ss'),
       description,
       'event-type': eventType,
       'redirect-to': isAlinkCheck.isAlink ? isAlinkCheck.href : undefined,
@@ -542,7 +542,7 @@ function _normalizeLog({
         if (isNewVisitor) {
           return {
             'current-runtime-id': clientId,
-            'current-runtime-start': moment(dt).format('YYYY.MM.DD HH:mm:ss'),
+            'current-runtime-start': dayjs(dt).format('YYYY.MM.DD HH:mm:ss'),
           }
         } else {
           if (!window.mmThisRuntimeClientId) {
@@ -556,7 +556,7 @@ function _normalizeLog({
 
         function storeRuntimeInfo({
           id = uuidv4(),
-          time = moment(Date.now()).format('YYYY.MM.DD HH:mm:ss'),
+          time = dayjs(Date.now()).format('YYYY.MM.DD HH:mm:ss'),
         } = {}) {
           window.mmThisRuntimeClientId = id
           window.mmThisRuntimeDatetimeStart = time

@@ -10,6 +10,7 @@
       <UiArticleSkeleton v-show="isLoading" />
 
       <ClientOnly>
+        <UiDonateBanner v-if="shouldShowDonate" class="donate-banner" />
         <template v-if="pageState === 'premiumPageIsLogin'">
           <UiReloadArticle
             v-show="isFail"
@@ -28,6 +29,7 @@
               >。
             </p>
           </div>
+
           <UiMagazineAfterArticle
             v-if="$GOExp['premium-post-related-position'].variant !== '1'"
           />
@@ -42,7 +44,7 @@
         <div class="invite-to-login-wrapper__fade-out-effect" />
         <UiPremiumInviteToSubscribe
           :shouldShowLoginNow="!$store.getters['membership/isLoggedIn']"
-          @subscribePremium="$customRouter.push('/subscribe')"
+          @subscribePremium="$router.replace('/subscribe')"
           @subscribePost="handleSubscribePost"
           @login="handleLogin"
         />
@@ -61,7 +63,7 @@ import UiReloadArticle from '~/components/culture-post-for-premium/UiReloadArtic
 import UiPremiumInviteToSubscribe from '~/components/UiPremiumInviteToSubscribe.vue'
 import UiMagazineAfterArticle from '~/components/culture-post-for-premium/UiMagazineAfterArticle.vue'
 import { Frequency } from '~/constants/common'
-
+import UiDonateBanner from '~/components/UiDonateBanner.vue'
 export default {
   name: 'UiArticleBody',
 
@@ -72,6 +74,7 @@ export default {
     UiArticleSkeleton,
     UiReloadArticle,
     UiMagazineAfterArticle,
+    UiDonateBanner,
   },
 
   setup() {
@@ -146,6 +149,13 @@ export default {
     ...mapGetters({
       isViewportWidthUpXl: 'viewport/isViewportWidthUpMd',
     }),
+    shouldShowDonate() {
+      const slug = this.$route?.params?.slug ?? ''
+      if (/^\d{8}(mkt|cnt|prf|corpmkt)/.test(slug)) {
+        return false
+      }
+      return this.$config.donateFeatureToggle
+    },
     contentWithAd() {
       let content = this.content
       if (!this.isViewportWidthUpMd) {
@@ -195,6 +205,11 @@ export default {
       color: rgba(199, 159, 101, 0.87);
       text-decoration: underline;
     }
+    .donate-banner {
+      a {
+        text-decoration: none;
+      }
+    }
   }
 }
 
@@ -239,5 +254,8 @@ export default {
       width: 774px;
     }
   }
+}
+.donate-banner {
+  margin: 32px 0 32px;
 }
 </style>

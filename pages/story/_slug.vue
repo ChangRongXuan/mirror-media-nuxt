@@ -15,7 +15,10 @@
       />
 
       <div v-else class="article">
-        <ContainerHeader :currentSectionName="sectionName" />
+        <ContainerHeader
+          :currentSectionName="sectionName"
+          :currentCategoryName="categoryName"
+        />
 
         <div class="story-container">
           <ContainerGptAd
@@ -115,7 +118,6 @@
                   class="latest-list"
                   heading="最新文章"
                   :items="latestStories"
-                  :isStyleAdjusted="true"
                   @sendGa="sendGaForClick('latest')"
                 />
               </div>
@@ -142,7 +144,14 @@
                       :items="popularStories"
                       :isStyleAdjusted="true"
                       @sendGa="sendGaForClick('popular')"
-                    />
+                    >
+                      <template v-slot:_popIn_recommend_hot
+                        ><div id="_popIn_recommend_hot"></div>
+                      </template>
+                      <template v-slot:_popIn_recommend_hot_2>
+                        <div id="_popIn_recommend_hot_2"></div>
+                      </template>
+                    </UiArticleListAsideB>
                   </section>
                 </div>
                 <ClientOnly>
@@ -164,6 +173,7 @@
 
           <div v-show="shouldShowAdPcFloating" class="ad-pc-floating">
             <ContainerGptAd
+              v-if="sectionIdForAd === sectionCarandwatchId"
               :pageKey="sectionCarandwatchId"
               adKey="PC_FLOATING"
               @slotRenderEnded="handleRenderEndedAdPcFloating"
@@ -238,6 +248,7 @@ import {
 } from '~/utils/article'
 
 import handleStoryPremiumRedirect from '~/middleware/handle-story-premium-redirect'
+import saveMemberArticleHistoryLocally from '~/mixins/save-member-article-history-locally'
 
 const PROJECTS_2022_SEA_TURTLE_SLUG = [
   'sea_turtle2022_seaghost',
@@ -279,6 +290,7 @@ export default {
 
     SvgCloseIcon,
   },
+  mixins: [saveMemberArticleHistoryLocally],
 
   async fetch() {
     const processPostResponse = (response) => {
@@ -301,9 +313,9 @@ export default {
           }
         }
         if (style === 'campaign') {
-          this.$nuxt.context.redirect(`/campaigns/${slug}`)
+          this.$nuxt.context.redirect(`/campaigns/${slug}/index.html`)
         } else if (style === 'projects') {
-          this.$nuxt.context.redirect(`/projects/${slug}/`)
+          this.$nuxt.context.redirect(`/projects/${slug}/index.html`)
         }
 
         this.$store.commit(
@@ -472,6 +484,9 @@ export default {
     categoryTitle() {
       return this.category.title ?? ''
     },
+    categoryName() {
+      return this.category.name ?? ''
+    },
     doesHaveWineCategory() {
       return doesContainWineName(this.categories)
     },
@@ -493,10 +508,13 @@ export default {
       if (this.section.name === 'mirrorcolumn') {
         return '5964418a4bbe120f002a3198'
       }
+      if (this.section.name === 'life') {
+        return 'other'
+      }
       return this.sectionId
     },
     storySlug() {
-      return this.$route.params.slug
+      return this.$route?.params.slug
     },
     sectionName() {
       return this.section.name ?? ''
@@ -519,7 +537,6 @@ export default {
 
     shouldShowAdPcFloating() {
       return (
-        this.sectionIdForAd === this.sectionCarandwatchId &&
         this.canAdvertise &&
         this.isDesktopWidth &&
         this.doesHaveAdPcFloating &&
@@ -603,7 +620,9 @@ export default {
             slug,
             title,
             href: `/story/${slug}/`,
-            imgSrc: getImgSrc(heroImage),
+            imgSrc: heroImage
+              ? getImgSrc(heroImage)
+              : require('~/assets/default-og-img.png'),
             label: getLabel(categories),
             sectionName: sections[0]?.name,
           }
@@ -826,6 +845,9 @@ export default {
               content: tagNamesStr,
             }
           : {},
+        tagNamesStr !== ''
+          ? { hid: 'keywords', name: 'keywords', content: tagNamesStr }
+          : {},
         this.hasSection
           ? { name: 'section-name', content: this.sectionName }
           : {},
@@ -902,7 +924,6 @@ export default {
         },
         {
           hid: 'popinAd',
-          skip: !this.shouldLoadPopinScript,
           innerHTML: `
             (function () {
               var pa = document.createElement('script')

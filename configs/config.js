@@ -35,6 +35,9 @@ const LINEPAY_CLIENT_MODE = ['development', 'production'].includes(
   ? process.env.LINEPAY_CLIENT_MODE
   : 'development'
 const SEARCH_URL = process.env.SEARCH_URL || 'search-url/search'
+const DONATION_PAGE_URL = process.env.DONATION_PAGE_URL
+const WARM_LIFE_FEATURE_TOGGLE =
+  process.env.WARM_LIFE_FEATURE_TOGGLE === 'on' || false
 
 // The following variables are given values according to different `ENV`
 let API_HOST = ''
@@ -49,7 +52,7 @@ let SALEOR_HOST = ''
 let NEWEBPAY_MEMBERSHIP_API_URL = ''
 let NEWEBPAY_PAPERMAG_API_URL = ''
 let PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME = ''
-
+let WEEKLY_API_SERVER_ORIGIN = ''
 switch (ENV) {
   case 'prod':
     API_HOST = 'tr-projects-rest'
@@ -70,6 +73,8 @@ switch (ENV) {
       'https://core.newebpay.com/MPG/mpg_gateway'
     PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME =
       process.env.PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME || 'linepay-webhook'
+    WEEKLY_API_SERVER_ORIGIN =
+      'adam-weekly-api-server-prod-ufaummkd5q-de.a.run.app'
     break
   case 'staging':
     API_HOST = 'tr-projects-rest'
@@ -90,6 +95,8 @@ switch (ENV) {
       'https://ccore.newebpay.com/MPG/mpg_gateway'
     PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME =
       process.env.PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME || 'linepay-webhook-staging'
+    WEEKLY_API_SERVER_ORIGIN =
+      'adam-weekly-api-server-staging-ufaummkd5q-de.a.run.app'
     break
   case 'dev':
     API_HOST = 'rest-service'
@@ -109,6 +116,8 @@ switch (ENV) {
       'https://ccore.newebpay.com/MPG/mpg_gateway'
     PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME =
       process.env.PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME || 'linepay-webhook-dev'
+    WEEKLY_API_SERVER_ORIGIN =
+      'adam-weekly-api-server-dev-ufaummkd5q-de.a.run.app'
     break
   default:
     API_HOST = process.env.API_HOST || 'api-host'
@@ -131,6 +140,8 @@ switch (ENV) {
       'https://ccore.newebpay.com/MPG/mpg_gateway'
     PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME =
       process.env.PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME || 'linepay-webhook-dev'
+    WEEKLY_API_SERVER_ORIGIN =
+      'adam-weekly-api-server-dev-ufaummkd5q-de.a.run.app'
 }
 
 export {
@@ -172,4 +183,7 @@ export {
   LINEPAY_CLIENT_MODE,
   SEARCH_URL,
   PUBSUB_LINEPAY_WEBHOOK_TOPIC_NAME,
+  DONATION_PAGE_URL,
+  WARM_LIFE_FEATURE_TOGGLE,
+  WEEKLY_API_SERVER_ORIGIN,
 }

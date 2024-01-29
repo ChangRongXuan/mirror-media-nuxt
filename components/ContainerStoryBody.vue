@@ -13,19 +13,33 @@
 
     <h2 v-if="story.subtitle" class="story__subtitle">{{ story.subtitle }}</h2>
 
-    <!-- eslint-disable-next-line vue/no-v-html -->
-    <div v-if="credit" class="story__credit" v-html="credit"></div>
-
-    <div class="story__share share">
-      <img
-        src="../assets/logo@2x.png"
-        alt="Mirror Media"
-        class="share__logo"
-        @click="handleClickHomeLogo"
-      />
-      <div class="share__br" />
-      <UiShareFb />
-      <UiShareLine />
+    <div class="story__credit_wrapper">
+      <div
+        v-if="credit && isExternalArticle"
+        class="story__credit story__credit--external"
+      >
+        鏡週刊
+      </div>
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div v-if="credit" class="story__credit" v-html="credit"></div>
+    </div>
+    <div class="story__share-and-donate share-and-donate">
+      <div class="share">
+        <img
+          src="../assets/logo@2x.png"
+          alt="Mirror Media"
+          class="share__logo"
+          @click="handleClickHomeLogo"
+        />
+        <div class="share__br" />
+        <UiShareFb class="share__logo" />
+        <UiShareLine class="share__logo" />
+      </div>
+      <div v-if="shouldShowDonate" class="donate">
+        <div class="share__br" />
+        <UiDonateButton class="share__logo--wider" />
+        <UiBeSubscriberButton />
+      </div>
     </div>
 
     <div v-if="heroVideoSrc" class="story__hero">
@@ -68,6 +82,7 @@
     <p v-if="isUpdatedAtVisible" class="story__updated-at">
       更新時間｜<span v-text="updatedAt" />
     </p>
+    <UiSupportBox v-if="shouldShowDonate" class="story__donate-banner" />
 
     <UiSocialNetworkServices style="margin: 30px auto 0 auto" />
 
@@ -94,7 +109,6 @@
         >了解內容授權資訊</a
       >。
     </p>
-
     <div class="magazine">
       <div>月費、年費會員免費線上閱讀動態雜誌</div>
       <button type="button" @click="enterMagazinePage">線上閱讀</button>
@@ -133,12 +147,13 @@
 <script>
 import { mapState, mapGetters } from 'vuex'
 import { ref, computed, onMounted, useContext } from '@nuxtjs/composition-api'
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
 
 import UiStoryContentHandler from './UiStoryContentHandler.vue'
+import UiBeSubscriberButton from './UiBeSubscriberButton.vue'
+import UiSupportBox from './UiSupportBoxBox.vue'
 import UiShareFb from '~/components/UiShareFb.vue'
 import UiShareLine from '~/components/UiShareLine.vue'
+import UiDonateButton from '~/components/UiDonateButton.vue'
 import UiStoryVideo from '~/components/UiStoryVideo.vue'
 import UiShareSidebox from '~/components/UiShareSidebox.vue'
 import UiSocialNetworkServices from '~/components/UiSocialNetworkServices.vue'
@@ -151,8 +166,7 @@ import {
   SITE_OG_IMG,
   DIGITAL_LINK,
 } from '~/constants/index.js'
-import { creditHtml } from '~/utils/article.js'
-dayjs.extend(utc)
+import { creditHtml, getFormattedTimeStr } from '~/utils/article.js'
 
 const THE_LAST_NUM_AD_INSERT_API_DATA_UNSTYLED_AND_NOT_EMPTY = 6
 const AD_KEYS_IN_STORY_CONTENT = ['MB_AT1', 'PC_AT1', 'MB_AT2']
@@ -175,10 +189,13 @@ export default {
     UiStoryContentHandler,
     UiShareFb,
     UiShareLine,
+    UiDonateButton,
     UiStoryVideo,
     UiShareSidebox,
     ContainerGptAd,
     UiAnniversary,
+    UiBeSubscriberButton,
+    UiSupportBox,
   },
   props: {
     story: {
@@ -199,6 +216,16 @@ export default {
     ...mapGetters({
       isLoggedIn: 'membership/isLoggedIn',
     }),
+
+    shouldShowDonate() {
+      const slug = this.$route?.params?.slug ?? ''
+      if (/^\d{8}(mkt|cnt|prf|corpmkt)/.test(slug)) {
+        return false
+      } else if (this.isExternalArticle) {
+        return false
+      }
+      return this.$config.donateFeatureToggle
+    },
 
     brief() {
       if (this.isString(this.story.brief)) {
@@ -351,11 +378,7 @@ export default {
       )
     },
     publishedDate() {
-      return (
-        dayjs(this.story.publishedDate)
-          .utcOffset(8)
-          .format('YYYY.MM.DD HH:mm') + ' 臺北時間'
-      )
+      return getFormattedTimeStr(this.story.publishedDate)
     },
     section() {
       return this.story.sections?.[0] ?? {}
@@ -364,16 +387,22 @@ export default {
       if (this.section.name === 'mirrorcolumn') {
         return '5964418a4bbe120f002a3198'
       }
+      if (this.section.name === 'life') {
+        return 'other'
+      }
       return this.section.id ?? 'other'
     },
     updatedAt() {
-      return dayjs(this.story.updatedAt).format('YYYY.MM.DD HH:mm')
+      return getFormattedTimeStr(this.story.updatedAt)
     },
     tags() {
       return this.story.tags || []
     },
     doesHaveTags() {
       return this.tags.length > 0
+    },
+    isExternalArticle() {
+      return this.story?.partner
     },
   },
 
@@ -553,31 +582,52 @@ export {
       }
     }
   }
-
+  &__credit_wrapper {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+  }
   &__credit {
     color: #34495e;
     margin-top: 25px;
     margin-bottom: 25px;
     line-height: 1.5;
 
+    &--external {
+      margin-right: 16px;
+      padding: 4px 8px;
+      border: 1px solid #34495e;
+      border-radius: 2px;
+    }
     &::v-deep a {
       color: #0b4fa2;
     }
   }
 
-  &__share {
+  &__share-and-donate {
     display: flex;
     margin-bottom: 45px;
-    align-items: center;
-
-    a {
-      width: 35px;
-
-      + a {
-        margin-left: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px 0px;
+    @include media-breakpoint-up(md) {
+      flex-direction: row;
+      align-items: center;
+    }
+    .share,
+    .donate {
+      display: flex;
+      align-items: center;
+    }
+    .donate {
+      margin-right: 8px;
+      .share__br {
+        display: none;
+        @include media-breakpoint-up(md) {
+          display: block;
+        }
       }
     }
-
     .share__br {
       content: '';
       display: block;
@@ -590,8 +640,14 @@ export {
     .share__logo {
       width: 35px;
       display: flex;
+      &--wider {
+        width: fit-content;
+      }
       &:hover {
         cursor: pointer;
+      }
+      + .share__logo {
+        margin-left: 10px;
       }
     }
   }
@@ -631,7 +687,12 @@ export {
   &__member-info {
     margin: 30px auto 0;
   }
-
+  &__donate-banner {
+    margin-top: 24px;
+    @include media-breakpoint-up(md) {
+      margin-top: 32px;
+    }
+  }
   &__tags {
     margin-top: 1.5em;
     margin-bottom: -0.6em;

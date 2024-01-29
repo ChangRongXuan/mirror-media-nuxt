@@ -32,6 +32,7 @@ import {
   SITE_TITLE,
   SITE_URL,
 } from '~/constants'
+import saveMemberArticleHistoryLocally from '~/mixins/save-member-article-history-locally'
 
 import { DABLE_WIDGET_IDS } from '~/constants/ads'
 import { checkCategoryHasMemberOnly } from '~/utils/article'
@@ -46,6 +47,7 @@ export default {
     ContainerCulturePost,
     ContainerCulturePostWide,
   },
+  mixins: [saveMemberArticleHistoryLocally],
   async fetch() {
     /*
      * fetch post in server side for composing meta tag properties, not article content
@@ -183,6 +185,11 @@ export default {
           statusCode,
         })
       }
+
+      this.$store.commit(
+        'setCanAdvertise',
+        !this.story.hiddenAdvertised ?? true
+      )
     },
     async fetchPost(token) {
       if (this.isLoading && this.failTimes) return
@@ -289,6 +296,9 @@ export default {
               name: 'news_keywords',
               content: tagNamesStr,
             }
+          : {},
+        tagNamesStr !== ''
+          ? { hid: 'keywords', name: 'keywords', content: tagNamesStr }
           : {},
         this.hasSection
           ? { name: 'section-name', content: this.sectionName }

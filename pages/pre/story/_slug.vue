@@ -93,6 +93,7 @@
           <section v-if="doesHaveLatestStories">
             <UiArticleListCompact
               :items="latestStories"
+              :isStyleAdjusted="true"
               @sendGa="sendGaForClick('popular')"
             />
           </section>
@@ -137,6 +138,7 @@ import ContainerHeader from '~/components/ContainerHeader.vue'
 import ContainerCulturePost from '~/components/culture-post/ContainerCulturePost.vue'
 import { DOMAIN_NAME, ENV, PREVIEW_QUERY } from '~/configs/config'
 import { getSectionColor } from '~/utils/index.js'
+import saveMemberArticleHistoryLocally from '~/mixins/save-member-article-history-locally'
 
 // import { DABLE_WIDGET_IDS, MICRO_AD_UNITS } from '~/constants/ads'
 import {
@@ -168,6 +170,7 @@ export default {
   setup() {
     useViewport()
   },
+  mixins: [saveMemberArticleHistoryLocally],
   async fetch() {
     const processPostResponse = (response) => {
       if (response.status === 'fulfilled') {
@@ -189,9 +192,9 @@ export default {
           }
         }
         if (style === 'campaign') {
-          this.$nuxt.context.redirect(`/campaigns/${slug}`)
+          this.$nuxt.context.redirect(`/campaigns/${slug}/index.html`)
         } else if (style === 'projects') {
-          this.$nuxt.context.redirect(`/projects/${slug}/`)
+          this.$nuxt.context.redirect(`/projects/${slug}/index.html`)
         }
 
         this.$store.commit(
@@ -294,7 +297,6 @@ export default {
       showShareLinksAside: false,
     }
   },
-
   computed: {
     storySlug() {
       return this.$route.params.slug
@@ -544,6 +546,9 @@ export default {
               name: 'news_keywords',
               content: tagNamesStr,
             }
+          : {},
+        tagNamesStr !== ''
+          ? { hid: 'keywords', name: 'keywords', content: tagNamesStr }
           : {},
         this.hasSection
           ? { name: 'section-name', content: this.sectionName }
@@ -1028,7 +1033,7 @@ function getLabel([item = {}] = []) {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 99999;
+  z-index: 400;
   @include media-breakpoint-up(xl) {
     display: none;
   }

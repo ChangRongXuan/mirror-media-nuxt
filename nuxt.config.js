@@ -238,7 +238,6 @@ module.exports = {
    * Plugins to load before mounting the App
    */
   plugins: [
-    '~/plugins/vuePluginsCustomRouter.js',
     '~/plugins/vuePluginsGlobal.js',
     '~/plugins/vuePluginsGlobal.client.js',
     '~/plugins/vueDirectivesGlobal.js',
@@ -255,7 +254,6 @@ module.exports = {
   serverMiddleware: [
     express.urlencoded({ extended: true }),
     '~/api/headers.js',
-    '~/serverMiddleware/appendUtmToUrl.js',
     {
       path: `/${API_PATH_FRONTEND}/gcs`,
       handler: '~/api/gcs.js',
@@ -365,7 +363,7 @@ module.exports = {
             case 'prod': {
               return {
                 apiKey: 'AIzaSyBZVaJXDbtc6O6Iy36OeYDG8Cd9pB2vq54',
-                authDomain: 'mirror-weekly.firebaseapp.com',
+                authDomain: 'www.mirrormedia.mg',
                 projectId: 'mirror-weekly',
                 storageBucket: 'mirror-weekly.appspot.com',
                 messagingSenderId: '814835936704',
@@ -377,7 +375,7 @@ module.exports = {
             case 'staging': {
               return {
                 apiKey: 'AIzaSyD-cFjoIjlEn7-dZtl3zw7OYCRPerl5URs',
-                authDomain: 'mirrormedia-staging.firebaseapp.com',
+                authDomain: 'www-staging.mirrormedia.mg',
                 projectId: 'mirrormedia-staging',
                 storageBucket: 'mirrormedia-staging.appspot.com',
                 messagingSenderId: '388524095772',
@@ -395,7 +393,7 @@ module.exports = {
                 storageBucket: 'mirrormediaapptest.appspot.com',
                 messagingSenderId: '305253456270',
                 appId: '1:305253456270:web:21f9851dd09f60ebfbacdf',
-                measurementId: 'G-EY5CYC602Z',
+                measurementId: 'G-8YH4MW9NX5',
               }
             }
           }
@@ -617,14 +615,15 @@ module.exports = {
    */
 
   publicRuntimeConfig: {
-    emailVerifyFeatureToggle: process.env.EMAIL_VERIFY_FEATURE_TOGGLE || 'off',
-    noAdFeatureToggle: process.env.NO_AD_FEATURE_TOGGLE || 'off',
-    topicListFeatureToggle: process.env.TOPIC_LIST_FEATURE_TOGGLE || 'off',
-    subscriptionPriceFeatureToggle:
-      process.env.SUBSCRIPTION_PRICE_FEATURE_TOGGLE || 'off',
-    headerExternalsFeatureToggle:
-      process.env.HEADER_EXTERNALS_FEATURE_TOGGLE || 'off',
     linepayUiToggle: process.env.LINEPAY_PAYMENT_UI_TOGGLE === 'on',
+    recordMemberArticleToggle:
+      process.env.RECORD_MEMBER_ARTICLE_HISTORY_FEATURE_TOGGLE === 'on',
+    recordMemberArticleMaxAge:
+      parseInt(process.env.MEMBER_ARTICLE_HISTORY_MAX_AGE) || 30,
+    donateFeatureToggle: process.env.DONATE_FEATURE_TOGGLE === 'on',
+    warmlifeFeatureToggle: process.env.WARM_LIFE_FEATURE_TOGGLE === 'on',
+    purchaseOneTimeFeatureToggle:
+      process.env.PURCHASE_ONE_TIME_FEATURE_TOGGLE === 'on',
   },
 
   env: {

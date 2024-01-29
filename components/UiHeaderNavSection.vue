@@ -1,10 +1,7 @@
 <template>
   <section class="header-nav-section">
     <div class="container">
-      <div
-        class="section section--home"
-        :class="{ active: isCurrentSection('home') }"
-      >
+      <div class="section section--home">
         <a href="/" @click="emitGa('section home')">
           <h2>首頁</h2>
         </a>
@@ -12,44 +9,28 @@
 
       <div
         v-for="section in sections"
-        :key="section.id"
+        :key="section.order"
         class="section"
         :class="[
-          `section--${section.name}`,
-          { active: isCurrentSection(section.name) },
+          `section--${getSectionSlug(section)}`,
+          { active: isCurrentSection(section) },
         ]"
       >
-        <a
-          :href="`/section/${section.name}`"
-          @click="emitGa(`section ${section.name}`)"
-        >
-          <h2>{{ section.title }}</h2>
+        <a :href="section.href" @click="emitGa(`section ${section.slug}`)">
+          <h2>{{ section.name }}</h2>
         </a>
-        <div class="section__dropdown">
+        <div v-if="section.type === 'section'" class="section__dropdown">
           <a
             v-for="category in section.categories"
             :key="category.id"
-            :href="getCategoryHref(section.name, category.name)"
-            @click="emitGa(`category ${category.name}`)"
+            :href="category.href"
+            @click="emitGa(`category ${category.slug}`)"
           >
-            <h3>{{ category.title }}</h3>
+            <h3>{{ category.name }}</h3>
           </a>
         </div>
       </div>
-      <template v-if="shouldShowExternals">
-        <div
-          v-for="partner in displayPartners"
-          :key="partner.id"
-          class="section section--external"
-        >
-          <a
-            :href="`/externals/${partner.name}`"
-            @click="emitGa(`external ${partner.name}`)"
-          >
-            <h2>{{ partner.display }}</h2>
-          </a>
-        </div>
-      </template>
+
       <!-- <div class="section section&#45;&#45;external">
         <h2>合作媒體</h2>
         <div class="section__dropdown">
@@ -80,25 +61,55 @@ export default {
       type: String,
       default: undefined,
     },
+    currentCategoryName: {
+      type: String,
+      default: undefined,
+    },
     partners: {
       type: Array,
       required: true,
       default: () => [],
     },
   },
-  computed: {
-    displayPartners() {
-      return (
-        this.partners.filter((partner) => partner.name === 'healthnews') ?? []
-      )
-    },
-    shouldShowExternals() {
-      return this.$config.headerExternalsFeatureToggle === 'on'
-    },
-  },
+
   methods: {
-    isCurrentSection(sectionName) {
-      return sectionName === this.currentSectionName
+    isCurrentSection(section) {
+      const sectionType = section.type
+      switch (sectionType) {
+        case 'section': {
+          return section.slug === this.currentSectionName
+        }
+        case 'category': {
+          const { path } = this.$route
+          const cat = '/category/'
+          const removePrefix = (str = '', prefix = '') => {
+            return str.slice(prefix.length)
+          }
+          const categoryName = removePrefix(path, cat)
+          const { sections } = section
+          if (path.startsWith(cat)) {
+            return (
+              sections?.[0] === this.currentSectionName &&
+              categoryName === section.slug
+            )
+          } else {
+            return this.currentCategoryName === section.slug
+          }
+        }
+
+        default:
+          return false
+      }
+    },
+    getSectionSlug(section) {
+      switch (section.type) {
+        case 'section':
+          return section.slug
+        case 'category':
+          return section?.sections?.[0]
+        default:
+          return null
+      }
     },
     getCategoryHref(sectionName, categoryName) {
       if (sectionName === 'videohub') {

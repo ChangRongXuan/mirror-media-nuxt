@@ -1,3 +1,6 @@
+import dayjs from './dayjs'
+import { ARTICLE_DATE_TIME_POSTFIX } from '~/constants'
+
 function creditHtml({
   writers = [],
   photographers = [],
@@ -57,17 +60,17 @@ function checkCategoryHasMemberOnly({ categories = [] } = {}) {
 
 function getStoryPathByType(story) {
   return story.style === 'projects'
-    ? `/projects/${story.slug}`
+    ? `/projects/${story.slug}/index.html`
     : `/story/${story.slug}`
 }
 
 function getStoryPath(story = {}) {
   switch (story.style) {
     case 'campaign': {
-      return `/campaigns/${story.slug}`
+      return `/campaigns/${story.slug}/index.html`
     }
     case 'projects': {
-      return `/projects/${story.slug}/`
+      return `/projects/${story.slug}/index.html`
     }
     default: {
       return checkCategoryHasMemberOnly(story)
@@ -77,10 +80,21 @@ function getStoryPath(story = {}) {
   }
 }
 
+function getFormattedTimeStr(time, format = 'YYYY.MM.DD HH:mm') {
+  if (dayjs(time).isValid()) {
+    return (
+      dayjs(time).utcOffset(8).format(format) + ' ' + ARTICLE_DATE_TIME_POSTFIX
+    )
+  } else {
+    return 'Invalid Date'
+  }
+}
+
 export {
   creditHtml,
   stripHtmlTags,
   doesContainWineName,
   checkCategoryHasMemberOnly,
   getStoryPath,
+  getFormattedTimeStr,
 }

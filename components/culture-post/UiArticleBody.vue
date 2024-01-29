@@ -14,7 +14,7 @@
       </div>
 
       <ContentHandler v-for="item in content" :key="item.id" :item="item" />
-
+      <UiSupportBox v-if="shouldShowDonate" class="donate-banner" />
       <template v-if="pageState === 'premiumPageIsLogin'">
         <div class="copyright-warning">
           <p>
@@ -33,14 +33,15 @@
 
 <script>
 import ContentHandler from './ContentHandler.vue'
+import UiSupportBox from '~/components/UiSupportBoxBox.vue'
 import UiPremiumInviteToLogin from '~/components/UiPremiumInviteToLogin.vue'
-
 export default {
   name: 'UiArticleBody',
 
   components: {
     ContentHandler,
     UiPremiumInviteToLogin,
+    UiSupportBox,
   },
 
   props: {
@@ -70,6 +71,13 @@ export default {
   computed: {
     doesHaveBrief() {
       return this.brief.length > 0
+    },
+    shouldShowDonate() {
+      const slug = this.$route?.params?.slug ?? ''
+      if (/^\d{8}(mkt|cnt|prf|corpmkt)/.test(slug)) {
+        return false
+      }
+      return this.$config.donateFeatureToggle
     },
   },
   methods: {
@@ -125,6 +133,11 @@ export default {
     a {
       color: rgba(199, 159, 101, 0.87);
       text-decoration: underline;
+    }
+    .donate-banner {
+      a {
+        text-decoration: none;
+      }
     }
   }
 
@@ -187,6 +200,12 @@ export default {
       max-width: 170px;
       line-height: 27px;
     }
+  }
+}
+.donate-banner {
+  margin: 0 27px 24px;
+  @include media-breakpoint-up(md) {
+    margin: 0 33px 32px;
   }
 }
 </style>

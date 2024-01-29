@@ -52,7 +52,6 @@
                 :key="plan.title"
                 :title="plan.title"
                 :details="plan.details"
-                :discountDetails="plan.discountDetails"
                 :buttons="plan.buttons"
                 :hintUnderButton="hintUnderButton"
                 @subscribePlan="handleSubscribePlan"
@@ -185,12 +184,6 @@ export default {
             { text: '月方案定價 $99 元，限時優惠 $49 元' },
             { text: '年方案定價 $1,188 元，限時優惠 $499 元' },
           ],
-          discountDetails: [
-            {
-              text: '優惠年訂閱團體折扣，請洽會員專屬客服信箱',
-              mailTo: 'MM-onlineservice@mirrormedia.mg',
-            },
-          ],
           buttons: [
             {
               title: '訂閱年方案',
@@ -208,15 +201,7 @@ export default {
             { text: '支持鏡週刊報導精神' },
             { text: '好文解鎖 隨心所欲' },
             {
-              text: `$${
-                this.$config.subscriptionPriceFeatureToggle === 'on' ? 5 : 1
-              } 元可享單篇好文 14 天無限瀏覽`,
-            },
-          ],
-          discountDetails: [
-            {
-              text: '優惠年訂閱團體折扣，請洽會員專屬客服信箱',
-              mailTo: 'MM-onlineservice@mirrormedia.mg',
+              text: '$5 元可享單篇好文 14 天無限瀏覽',
             },
           ],
           buttons: [
@@ -230,26 +215,27 @@ export default {
         {
           id: 0,
           text: '月方案計算天數為 30 日，年方案計算天數為 365 日。',
+          style: 'normal',
         },
         {
           id: 1,
           text: '月訂閱方案經會員授權扣款購買即為完成服務，因此月費會員無法退費，但可取消繼續訂閱。',
+          style: 'normal',
         },
         {
           id: 2,
           text: '訂閱購買的同時會開啓自動續費(扣款)，在訂閱到期時將依據原訂閱方案自動扣款，並延續訂閱。',
+          style: 'warning',
         },
         {
           id: 3,
           text: '訂閱相關問題請 email 至會員專屬客服信箱 <a href = "mailto: MM-onlineservice@mirrormedia.mg" class="membership-subscribe__blue">MM-onlineservice@mirrormedia.mg</a>，我們會盡快為您協助處理。',
+          style: 'normal',
         },
         {
           id: 4,
           text: '更多詳細內容，請至<a href = "/story/service-rule/" class="membership-subscribe__blue">服務條款</a>。',
-        },
-        {
-          id: 5,
-          text: '本抽獎活動為機會中獎活動，依中華民國稅法規定，中獎金額超過 NT$1,000元，中獎人須併入個人年度綜合所得稅申報；若中獎金額超過 NT$20,010元，中獎人須自行負擔10%之機會中獎所得稅（非中華民國境內居住之個人為20%）並配合本公司辦理代扣繳相關事宜(得獎者應先繳納中獎所得稅後，本公司方將中獎獎項提供予得獎人)。</br>中獎人須提供姓名、身分證字號、戶籍地址及身分證正、反面影本，以供本公司依法向稅捐機關進行年度申報作業。',
+          style: 'normal',
         },
       ],
       isPayByApp: undefined,
@@ -272,12 +258,6 @@ export default {
                 { text: '月方案定價 $99 元，限時優惠 $49 元' },
                 { text: '年方案定價 $1,188 元，限時優惠 $499 元' },
               ],
-              discountDetails: [
-                {
-                  text: '優惠年訂閱團體折扣，請洽會員專屬客服信箱',
-                  mailTo: 'MM-onlineservice@mirrormedia.mg',
-                },
-              ],
               buttons: [
                 {
                   title: '訂閱年方案',
@@ -299,12 +279,6 @@ export default {
                 { text: '免費閱讀數位版動態雜誌' },
                 { text: '月方案定價 $99 元，限時優惠 $49 元' },
                 { text: '年方案定價 $1,188 元，限時優惠 $499 元' },
-              ],
-              discountDetails: [
-                {
-                  text: '優惠年訂閱團體折扣，請洽會員專屬客服信箱',
-                  mailTo: 'MM-onlineservice@mirrormedia.mg',
-                },
               ],
               buttons: [
                 {
@@ -332,12 +306,6 @@ export default {
                 { text: '月方案定價 $99 元，限時優惠 $49 元' },
                 { text: '年方案定價 $1,188 元，限時優惠 $499 元' },
               ],
-              discountDetails: [
-                {
-                  text: '優惠年訂閱團體折扣，請洽會員專屬客服信箱',
-                  mailTo: 'MM-onlineservice@mirrormedia.mg',
-                },
-              ],
               buttons: [
                 {
                   title: '訂閱年方案',
@@ -355,9 +323,7 @@ export default {
                 { text: '支持鏡週刊報導精神' },
                 { text: '好文解鎖 隨心所欲' },
                 {
-                  text: `$${
-                    this.$config.subscriptionPriceFeatureToggle === 'on' ? 5 : 1
-                  } 元可享單篇好文 14 天無限瀏覽`,
+                  text: '$5 元可享單篇好文 14 天無限瀏覽',
                 },
               ],
               buttons: [

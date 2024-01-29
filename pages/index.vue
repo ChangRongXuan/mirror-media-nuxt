@@ -10,7 +10,10 @@
       />
       <ContainerGptAd class="home__ad home__ad--hd" pageKey="home" adKey="HD" />
 
-      <section class="editor-choices-container">
+      <section
+        v-show="!showHomepageEditorChoiceB"
+        class="editor-choices-container"
+      >
         <UiColumnHeader
           title="編輯精選"
           class="home__column-header home__column-header--editor-choices"
@@ -19,6 +22,32 @@
           :articles="editorChoicesArticles"
           @sendGa="sendGaForClick('choice')"
         />
+      </section>
+
+      <section
+        v-show="showHomepageEditorChoiceB"
+        class="editor-choices-and-latest-container"
+      >
+        <section class="editor-choices-container">
+          <UiColumnHeader
+            title="編輯精選"
+            class="home__column-header home__column-header--editor-choices"
+          />
+          <UiEditorChoicesB
+            :articles="editorChoicesArticles"
+            @sendGa="sendGaForClick('choice')"
+          />
+        </section>
+        <div
+          v-show="itemsBesideEditorChoices.length"
+          class="latest-beside-editor-choices-container"
+        >
+          <UiArticleListAsideItem
+            v-for="(item, index) in itemsBesideEditorChoices"
+            :key="`${item.slug}-aside-${index}`"
+            :item="item"
+          />
+        </div>
       </section>
 
       <ContainerGptAd
@@ -70,22 +99,17 @@
 
           <section class="container">
             <UiColumnHeader title="最新文章" class="home__column-header" />
-            <UiArticleGalleryB
-              v-if="$GOExp['homepage-latest-redesign'].variant === '1'"
-              :items="latestItems"
-              :isPremiumMember="isPremiumMember"
-              @sendGa="sendGaForClick('latest')"
-            />
             <UiArticleGallery
               v-if="shouldShowFocus"
               :isPremiumMember="isPremiumMember"
-              :items="latestItems"
+              :items="itemsOfLatestList"
               @sendGa="sendGaForClick('latest')"
             />
             <UiArticleGalleryWithoutFocus
               v-else
               :isPremiumMember="isPremiumMember"
               :items="latestItems"
+              :showTopFive="!showHomepageEditorChoiceB"
               @sendGa="sendGaForClick('latest')"
             />
             <UiInfiniteLoading
@@ -134,14 +158,17 @@ import localforage from 'localforage'
 import UiFlashNews from '~/components/UiFlashNews.vue'
 import UiColumnHeader from '~/components/UiColumnHeader.vue'
 import UiEditorChoices from '~/components/UiEditorChoices.vue'
+import UiEditorChoicesB from '~/components/UiEditorChoicesB.vue'
 import UiVideoModal from '~/components/UiVideoModal.vue'
 import UiArticleListFocus from '~/components/UiArticleListFocus.vue'
 import UiArticleGallery from '~/components/UiArticleGallery.vue'
-import UiArticleGalleryB from '~/components/UiArticleGalleryB.vue'
+
 import UiArticleGalleryWithoutFocus from '~/components/UiArticleGalleryWithoutFocus.vue'
+
 import UiInfiniteLoading from '~/components/UiInfiniteLoading.vue'
 import ContainerGptAd from '~/components/ContainerGptAd.vue'
 import ContainerFullScreenAds from '~/components/ContainerFullScreenAds.vue'
+import UiArticleListAsideItem from '~/components/UiArticleListAsideItem.vue'
 
 import SvgCloseIcon from '~/assets/close-black.svg?inline'
 
@@ -160,7 +187,7 @@ const GA_UTM_EDITOR_CHOICES = 'utm_source=mmweb&utm_medium=editorchoice'
  * 東森新聞
  * const PARTNER_ID_EBC = '5ea7fd55a66f9e0f00a04e9a'
  */
-const MICRO_AD_IDXES_INSERTED = [2, 5, 8]
+
 const LATEST_ARTICLES_MIN_NUM = 6
 const EXTERNALS_IDX_START_INSERTED = 12
 const EXTERNALS_MAX_RESULTS = 6
@@ -174,12 +201,15 @@ export default {
     UiVideoModal,
     UiArticleListFocus,
     UiArticleGallery,
+
     UiInfiniteLoading,
     ContainerGptAd,
     ContainerFullScreenAds,
-    UiArticleGalleryB,
+
     UiArticleGalleryWithoutFocus,
     SvgCloseIcon,
+    UiArticleListAsideItem,
+    UiEditorChoicesB,
   },
 
   async fetch() {
@@ -250,6 +280,7 @@ export default {
       observerOfLastSecondFocusList: undefined,
       canFixLastFocusList: false,
       shouldFixLastFocusList: false,
+      microAdIndexInserted: [],
     }
   },
 
@@ -311,6 +342,13 @@ export default {
       return listWithUniqueItems.sort(function (currentItem, nextItem) {
         return nextItem.publishedTimeStamp - currentItem.publishedTimeStamp
       })
+    },
+
+    itemsOfLatestList() {
+      return this.latestItems.slice(6)
+    },
+    itemsBesideEditorChoices() {
+      return this.latestItems.slice(0, 5)
     },
 
     isValidEventModItem() {
@@ -378,6 +416,12 @@ export default {
         }
       }
     },
+    showHomepageEditorChoiceB() {
+      return (
+        this.$GOExp?.['homepage-editor-choices-redesigned']?.variant === '1' &&
+        this.isDesktopWidth
+      )
+    },
   },
 
   watch: {
@@ -385,6 +429,7 @@ export default {
     canFixLastFocusList: ['handleFixLastFocusList'],
 
     hasScrolled: ['loadFixedEventMod', 'loadEventEmbedded'],
+    showHomepageEditorChoiceB: ['insertMicroAds'],
   },
 
   beforeMount() {
@@ -398,14 +443,18 @@ export default {
         )
         this.groupedArticles = groupedResponse
         this.getGroupedArticlesWithoutExternalLink()
-
         this.loadLatestListInitial()
       }
-      this.hasLoadedFirstGroupedArticle = true
-      this.insertMicroAds()
     } catch (err) {
-      this.$nuxt.context.error({ statusCode: 500 })
+      console.error(err)
     }
+    this.hasLoadedFirstGroupedArticle = true
+
+    this.microAdIndexInserted = this.showHomepageEditorChoiceB
+      ? [7, 10, 13]
+      : [2, 5, 8]
+
+    this.insertMicroAds()
   },
   beforeDestroy() {
     this.cleanFixedLastFocusList()
@@ -426,6 +475,11 @@ export default {
       return currentTimestamp - articlesUpdateTimestamp > 1000 * 180
     },
     insertMicroAds() {
+      const newIndex = this.showHomepageEditorChoiceB ? [7, 10, 13] : [2, 5, 8]
+      if (newIndex[0] !== this.microAdIndexInserted[0]) {
+        this.areMicroAdsInserted = false
+      }
+      this.microAdIndexInserted = newIndex
       if (
         this.latestItems.length < LATEST_ARTICLES_MIN_NUM ||
         this.areMicroAdsInserted
@@ -433,7 +487,10 @@ export default {
         return
       }
 
-      MICRO_AD_IDXES_INSERTED.forEach((idxInserted, idxUnit) => {
+      this.latestList.items = this.latestList.items.filter(
+        (item) => !item.isMicroAd
+      )
+      this.microAdIndexInserted.forEach((idxInserted, idxUnit) => {
         this.insertLatestItems(idxInserted, {
           isMicroAd: true,
           idx: idxUnit,
@@ -478,12 +535,16 @@ export default {
         this.isNoNeedToFetchLatestList = true
         return []
       }
-      const { latest = [] } = await this.$fetchGroupedWithExternal(
-        `post_external0${this.fileId}`
-      )
-
-      this.fileId += 1
-      return latest
+      try {
+        const { latest = [] } = await this.$fetchGroupedWithExternal(
+          `post_external0${this.fileId}`
+        )
+        this.fileId += 1
+        return latest
+      } catch (err) {
+        this.fileId += 1
+        return []
+      }
     },
     pushLatestItems(items = []) {
       this.latestList.items.push(
@@ -501,7 +562,6 @@ export default {
         id = '',
         title = '',
         brief,
-        sections = [],
         publishedDate = '',
         redirect = '',
       } = item
@@ -515,7 +575,7 @@ export default {
         href: getHref(item, this.isPremiumMember),
         imgSrc: getImg(item),
         label: getLabel(item),
-        sectionName: item.partner ? 'external' : sections[0]?.name,
+        sectionName: getSectionName(item),
         publishedTimestamp: new Date(publishedDate).getTime(),
         redirect,
       }
@@ -719,11 +779,11 @@ function getHref(
     return `/external/${slug}/`
   }
   if (style === 'campaign') {
-    return `/campaigns/${slug}`
+    return `/campaigns/${slug}/index.html`
   } else if (style === 'projects') {
-    return `/projects/${slug}/`
+    return `/projects/${slug}/index.html`
   } else if (isPremiumMember) {
-    return `pre/story/${slug}/`
+    return `pre/story/${slug}`
   }
   return `/story/${slug}/`
 }
@@ -758,7 +818,11 @@ function getLabel({ sections = [], categories = [], partner } = {}) {
   }
 
   if (sections.length > 0) {
-    return sections[0]?.title
+    if (sections.some((section) => section.name === 'member')) {
+      return '會員專區'
+    } else {
+      return sections[0]?.title
+    }
   }
 
   const [firstCategory = {}, secondCategory = {}] = categories
@@ -769,7 +833,14 @@ function getLabel({ sections = [], categories = [], partner } = {}) {
 
   return firstCategory.title
 }
-
+function getSectionName({ sections = [], partner } = {}) {
+  if (partner) {
+    return 'external'
+  } else if (sections?.some((section) => section.name === 'member')) {
+    return 'member'
+  }
+  return sections[0]?.name
+}
 function inThePeriodBetween(startDate, endDate) {
   if (startDate === undefined || endDate === undefined) {
     return false
@@ -783,7 +854,6 @@ function inThePeriodBetween(startDate, endDate) {
 export {
   GA_UTM_EDITOR_CHOICES,
   LATEST_ARTICLES_MIN_NUM,
-  MICRO_AD_IDXES_INSERTED,
   EXTERNALS_IDX_START_INSERTED,
   EXTERNALS_MAX_RESULTS,
   transformContentOfFlashNews,
@@ -818,6 +888,13 @@ $width--aside: 226px;
       }
       @include media-breakpoint-up(xl) {
         display: none;
+      }
+    }
+
+    .column-header__top-five {
+      display: span;
+      ul {
+        display: span;
       }
     }
   }
@@ -876,11 +953,24 @@ $width--aside: 226px;
   }
 }
 
+.editor-choices-and-latest-container {
+  display: flex;
+  .editor-choices-container {
+    width: 640px;
+  }
+}
+
 .editor-choices-container {
   margin-bottom: 20px;
+
   @include media-breakpoint-up(sm) {
     margin-bottom: 40px;
   }
+}
+
+.latest-beside-editor-choices-container {
+  width: 368px;
+  margin-left: 16px;
 }
 
 .column-container {

@@ -20,6 +20,8 @@
           <SvgLineIcon class="line" />
         </a>
       </div>
+      <UiDonateButtonCircle v-if="shouldShowDonate" class="donate" />
+      <UiBeSubscriberButton v-if="shouldShowDonate" class="subscribe-btn" />
     </div>
 
     <div
@@ -125,7 +127,7 @@
 import { mapGetters } from 'vuex'
 
 import UiArticleList from './UiArticleList.vue'
-
+import UiBeSubscriberButton from '~/components/UiBeSubscriberButton.vue'
 import {
   OnePageScroller,
   currentYPosition,
@@ -139,7 +141,7 @@ import { creditHtml } from '~/utils/article.js'
 import SvgShareIcon from '~/assets/share.svg?inline'
 import SvgFbIcon from '~/assets/fb-logo.svg?inline'
 import SvgLineIcon from '~/assets/line-logo.svg?inline'
-
+import UiDonateButtonCircle from '~/components/UiDonateButtonCircle.vue'
 export default {
   name: 'ContainerPhotoGallery',
 
@@ -159,6 +161,8 @@ export default {
     SvgShareIcon,
     SvgFbIcon,
     SvgLineIcon,
+    UiDonateButtonCircle,
+    UiBeSubscriberButton,
   },
 
   props: {
@@ -199,6 +203,14 @@ export default {
       isViewportWidthUpMd: 'viewport/isViewportWidthUpMd',
       isViewportWidthUpXl: 'viewport/isViewportWidthUpXl',
     }),
+
+    shouldShowDonate() {
+      const slug = this.$route?.params?.slug ?? ''
+      if (/^\d{8}(mkt|cnt|prf|corpmkt)/.test(slug)) {
+        return false
+      }
+      return this.$config.donateFeatureToggle
+    },
 
     brief() {
       return this.story.brief?.apiData || []
@@ -697,6 +709,13 @@ body {
   z-index: 99;
   display: flex;
 
+  .subscribe-btn {
+    padding: 8px 12px;
+    height: 40px;
+    margin-top: 4px;
+    margin-left: 8px;
+  }
+
   .mm-icon {
     width: 48px;
     height: 48px;
@@ -720,6 +739,7 @@ body {
     .share {
       width: 48px;
       border-radius: 50%;
+      border: 1px solid #fff;
       transition: all 0.1s ease-out;
       cursor: pointer;
 
@@ -729,6 +749,7 @@ body {
     }
 
     > a {
+      width: 0;
       opacity: 0;
 
       .fb {
@@ -753,12 +774,15 @@ body {
     }
 
     &:hover > a {
+      width: 48px;
       opacity: 1;
       margin-left: 10px;
     }
   }
 }
-
+.donate {
+  margin-left: 10px;
+}
 .btn-toggle-description {
   background-position: center;
   background-repeat: no-repeat;

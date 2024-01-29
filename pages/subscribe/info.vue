@@ -146,7 +146,7 @@
 <script>
 import qs from 'qs'
 import { required, email, sameAs } from 'vuelidate/lib/validators'
-import { useRoute, useStore, useContext } from '@nuxtjs/composition-api'
+import { useRoute, useStore } from '@nuxtjs/composition-api'
 import {
   ENV,
   DOMAIN_NAME,
@@ -169,7 +169,6 @@ export default {
     'authenticate',
     'handle-go-to-marketing',
     'handle-go-to-email-verify',
-    'handle-go-to-service-rule',
   ],
   components: {
     SubscribeStepProgress,
@@ -199,7 +198,6 @@ export default {
 
     function usePerchasedPlan() {
       const route = useRoute()
-      const { $config } = useContext()
 
       switch (route.value.query.plan) {
         case Frequency.OneTimeHyphen:
@@ -207,14 +205,9 @@ export default {
             {
               id: route.value.query['one-time-post-id'],
               detail: '鏡週刊Basic會員（單篇）',
-              hint:
-                $config.subscriptionPriceFeatureToggle === 'on'
-                  ? '$5 元可享單篇好文 14 天無限瀏覽'
-                  : '單篇 $1 元，享 14 天內無限次觀看',
-              price: `原價 NT$${
-                $config.subscriptionPriceFeatureToggle === 'on' ? 5 : 1
-              }`,
-              newPrice: $config.subscriptionPriceFeatureToggle === 'on' ? 5 : 1,
+              hint: '$5 元可享單篇好文 14 天無限瀏覽',
+              price: '原價 NT$5',
+              newPrice: 5,
               key: 'basic',
             },
           ]
@@ -252,7 +245,7 @@ export default {
       email: '',
       paymentMethod: '',
       receiptData: {
-        receiptPlan: '捐贈',
+        receiptPlan: '',
         donateOrganization: '',
         carrierType: '',
         carrierNumber: '',
@@ -264,7 +257,7 @@ export default {
       validateOn: true,
       formStatus: {
         payment: 'OK',
-        receipt: 'OK',
+        receipt: 'ERROR',
       },
       paymentPayload: {},
       newebpayApiUrl: NEWEBPAY_MEMBERSHIP_API_URL,
@@ -324,7 +317,16 @@ export default {
       return [Frequency.Monthly, Frequency.Yearly].includes(this.frequency)
     },
     disallowToSubmit() {
-      return this.paymentMethod === '' || !this.frequency
+      if (this.isServicesRuleAgree || this.isCheckingServiceRule) {
+        return (
+          this.paymentMethod === '' ||
+          !this.frequency ||
+          this.formStatus.receipt !== 'OK' ||
+          !this.email ||
+          (!this.$v.email.email && this.$v.email.$error)
+        )
+      }
+      return true
     },
   },
   watch: {
@@ -367,6 +369,9 @@ export default {
     },
     setReceiptData(editedReceiptData) {
       this.receiptData = editedReceiptData
+      this.$nextTick(function () {
+        this.$refs.receiptDOM.check()
+      })
     },
     setFormStatus(type, formStatus) {
       this.formStatus[type] = formStatus
@@ -441,14 +446,6 @@ export default {
             ? `http://localhost:3000/subscribe/return`
             : `https://${DOMAIN_NAME}/subscribe/return`
 
-        /*
-         * add utm query strings if there is utm object stored in cookie
-         * to track conversion rate to speicfic campaign
-         */
-        const queryString =
-          this.$store?.getters?.['utm-url-params/getUtmQueryString']()
-        tradeInfo.ReturnURL += queryString
-
         // // encrypt tradeInfo
         this.paymentPayload = await this.$axios.$post(
           `${window.location.origin}/api/v2/newebpay/v1`,
@@ -488,10 +485,9 @@ export default {
 
         const orderNumber =
           updatedSubscription?.data?.updatesubscription?.orderNumber
-        this.$customRouter.push('/subscribe/success', {
-          orderNumber,
-          code: Frequency.Yearly,
-        })
+        this.$router.push(
+          `/subscribe/success?orderNumber=${orderNumber}&code=${Frequency.Yearly}`
+        )
       } catch (error) {
         console.error(error)
         this.isLoading = false

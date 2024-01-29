@@ -1,8 +1,9 @@
 const { default: errors } = require('@twreporter/errors')
 const axios = require('axios')
-const moment = require('moment-timezone')
+const dayjs = require('dayjs')
+const utc = require('dayjs/plugin/utc')
+const timezone = require('dayjs/plugin/timezone')
 const { createLinePayClient } = require('line-pay-merchant')
-const { PubSub } = require('@google-cloud/pubsub')
 const REQUEST_STATUS = require('../constants/request').STATUS
 const {
   API_TIMEOUT,
@@ -11,6 +12,9 @@ const {
   LINEPAY_CLIENT_MODE,
   GCP_KEYFILE,
 } = require('../configs/config')
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const linepayClient = createLinePayClient({
   channelId: LINEPAY_CHANNEL_ID,
@@ -77,7 +81,7 @@ function createProxy(baseUrl, timeout = API_TIMEOUT) {
  * @return {String} orderNumber
  */
 function createOrderNumberByTaipeiTZ(date, id) {
-  const time = moment(date).tz('Asia/Taipei')
+  const time = dayjs(date).tz('Asia/Taipei')
   const prefix = 'M'
   const dateString = time.format('YYMMDD')
   const idString = (id % 10000).toString().padStart(5, '0')
@@ -125,6 +129,9 @@ async function fireGqlRequest(query, variables, apiUrl) {
  * @return {Boolean} success
  */
 async function publishMessageToPubSub(topicName, projectId, message) {
+  // dynamic import to prevent client side error cause vue component break
+  const { PubSub } = await import('@google-cloud/pubsub')
+
   try {
     const pubsub = new PubSub({
       projectId,

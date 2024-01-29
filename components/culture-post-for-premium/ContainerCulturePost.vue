@@ -299,12 +299,30 @@ export default {
         publishedDate: new Date(publishedDate),
         updatedAt: new Date(updatedAt),
         relateds,
-        sectionLabelFirst: sections?.[0]?.title,
+        sectionLabelFirst: getSectionLabelFirst(),
         sectionIdFirst,
         tags,
         isTruncated,
       }
 
+      /**
+       * In premium article, we have to select one item of array `this.sections` and render it title.
+       * The logic of select title for render is :
+       * 1. If the first item's name of array `this.sections` is `member`, and second item of array is existed,
+       * then show second item's title.
+       * 2. If the first item's name of array `this.sections` is `member`, but second item of array is not existed,
+       * then show first item's title, which name is `member`, title is `會員專區`.
+       * 3. If the first item's name of array `this.sections` is not `member`,
+       * then show first item's title, which name is definitely not `member`.
+       * @returns {string}
+       */
+      function getSectionLabelFirst() {
+        if (sections?.[0]?.name === 'member' && sections?.[1]) {
+          return sections?.[1]?.title
+        } else {
+          return sections?.[0]?.title
+        }
+      }
       function getBrief() {
         return (
           brief.apiData
@@ -328,6 +346,7 @@ export default {
         )
         .map((item) => ({
           id: item.id,
+          type: item.type,
           content: item.content[0],
         }))
     },
@@ -671,9 +690,9 @@ $article-body-width-in-xxl-viewport: 774px;
 
 .share-toggled {
   position: fixed;
-  bottom: 20px;
+  bottom: 100px;
   right: 20px;
-  z-index: 99999;
+  z-index: 400;
   @include media-breakpoint-up(xl) {
     display: none;
   }
